@@ -465,8 +465,23 @@ def process_line(args) -> dict:
     needs_llm = direct_result.get('needs_improvement', False)
     reason = direct_result.get('improvement_reason', '')
 
+    # Explain why LLM is being invoked
+    reason_explanations = {
+        'poor_quality': 'RMS>2.5σ, LLM will try to improve continuum/blends',
+        'crowded_region': '≥10 lines detected, LLM will check for missed blends',
+        'elevated_chi2': 'χ²>15, LLM will examine residual patterns',
+        'elevated_central_rms': 'central RMS>2.5σ, LLM will refine target line fit',
+        'fit_failed': 'fitting failed, LLM will try alternative approach',
+    }
+    # Handle residual_slope_X.XX format
+    if reason and reason.startswith('residual_slope_'):
+        slope_val = reason.replace('residual_slope_', '')
+        reason_text = f'tilted residuals ({slope_val}), LLM will adjust continuum'
+    else:
+        reason_text = reason_explanations.get(reason, reason) if reason else 'needs review'
+    
     if needs_llm:
-        print(f"    [{idx+1}/{total}] {line_wave:.2f}Å: Direct={d_ew:.1f}mÅ ({d_qual}) → LLM ({reason})", flush=True)
+        print(f"    [{idx+1}/{total}] {line_wave:.2f}Å: Direct={d_ew:.1f}mÅ → LLM review ({reason_text})", flush=True)
 
     result = {
         'wavelength': line_wave,
