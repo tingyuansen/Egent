@@ -21,6 +21,8 @@ Egent uses a **two-stage approach**:
 - **Complete Provenance**: All Voigt parameters, continuum coefficients, and LLM reasoning stored
 - **Parallel Processing**: Thread pool execution for high throughput
 
+> **Coming Soon**: Fully offline version using [Ollama](https://ollama.ai/) with Qwen3-VL-8B for local inference without API costs.
+
 ## Installation
 
 ```bash
