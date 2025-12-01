@@ -58,6 +58,17 @@ python run_ew.py --spectrum example/spectrum.csv --lines example/linelist.csv --
 python run_ew.py --spectrum example/spectrum.csv --lines example/linelist.csv --workers 5
 ```
 
+## Tutorial
+
+For a detailed walkthrough with explanations, see **`tutorial.ipynb`**. The Jupyter notebook covers:
+- Setting up your OpenAI API key
+- Understanding the input data format
+- The physics of Voigt profile fitting
+- Running the pipeline and interpreting results
+- Reading the output JSON and diagnostic plots
+
+The tutorial is self-contained and installs all dependencies automatically.
+
 ## Input File Formats
 
 ### Spectrum File (CSV)
