@@ -26,7 +26,7 @@ Egent uses a **two-stage approach**:
 ## Installation
 
 ```bash
-pip install numpy pandas scipy matplotlib openai python-dotenv
+pip install numpy pandas scipy matplotlib openai python-dotenv streamlit
 ```
 
 ## Configuration
@@ -48,6 +48,20 @@ export EGENT_MODEL=gpt-5
 ```
 
 ## Quick Start
+
+### Option 1: Web Interface (Streamlit)
+
+```bash
+streamlit run app.py
+```
+
+This opens a web app where you can:
+- Upload spectrum and line list files
+- Enter your OpenAI API key
+- Watch results and plots update in real-time
+- Download results as JSON
+
+### Option 2: Command Line
 
 ```bash
 # Run on example data
@@ -175,10 +189,11 @@ The LLM receives the diagnostic plot and can:
 
 ```
 Egent/
+├── app.py             # Streamlit web interface
 ├── config.py          # Configuration (API key, model)
 ├── llm_client.py      # OpenAI client with retry logic
 ├── ew_tools.py        # Core EW measurement functions (LLM tools)
-├── run_ew.py          # Main analysis pipeline
+├── run_ew.py          # Main analysis pipeline (CLI)
 ├── tutorial.ipynb     # Step-by-step tutorial notebook
 ├── example/           # Example data files
 │   ├── spectrum.csv   # Sample high-SNR Magellan/MIKE spectrum
