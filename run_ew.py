@@ -384,9 +384,9 @@ def llm_measure_with_vision(
             if name == "get_fit_plot" and result.get("image_base64"):
                 image_b64 = result["image_base64"]
 
-                # Save plot
+                # Save plot to hidden temp directory
                 if output_dir:
-                    plot_dir = Path(output_dir) / "plots"
+                    plot_dir = Path(output_dir) / ".plots"
                     plot_dir.mkdir(exist_ok=True, parents=True)
                     plot_file = plot_dir / f"llm_{line_wave:.2f}_{int(time.time())}.png"
                     with open(plot_file, 'wb') as f:
@@ -882,11 +882,11 @@ def run_ew_analysis(
 
     # Clean up temporary plots directory if requested
     if clean_plots:
-        plots_dir = Path(__file__).parent / 'plots'
-        if plots_dir.exists():
-            import shutil
-            shutil.rmtree(plots_dir)
-            print(f"Cleaned up temporary plots directory")
+        # Check both in output dir and parent dir
+        for plots_dir in [out_dir / '.plots', Path(__file__).parent / '.plots']:
+            if plots_dir.exists():
+                import shutil
+                shutil.rmtree(plots_dir)
 
     print(f"{'='*70}")
 

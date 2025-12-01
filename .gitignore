@@ -26,6 +26,7 @@ Thumbs.db
 output/
 tutorial_output/
 plots/
+.plots/
 *_output/
 
 # Data (too large for git)
