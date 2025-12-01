@@ -600,8 +600,8 @@ def process_line(args) -> dict:
 
 
 def save_line_plot(spectrum_file: str, result: dict, output_dir: str, subdir: str):
-    """Save diagnostic plot for a line."""
-    from ew_tools import load_spectrum, extract_region, fit_ew, get_fit_plot, _get_session
+    """Save diagnostic plot for a line - using stored fit data for consistency."""
+    from ew_tools import load_spectrum, extract_region, set_continuum_method, fit_ew, _get_session
     from scipy.special import voigt_profile
     
     wave = result.get('wavelength')
@@ -609,48 +609,71 @@ def save_line_plot(spectrum_file: str, result: dict, output_dir: str, subdir: st
         return
     
     try:
+        # Re-run the fit to populate session with correct data
         load_spectrum(spectrum_file)
         region_info = result.get('region_info') or {}
         window = region_info.get('window', 3.0)
         extract_region(wave, window=window)
         
-        # Get voigt params
-        if result.get('used_llm') and result.get('iterations'):
-            all_lines = result['iterations'][-1].get('all_lines', [])
+        # Use same continuum method as original fit
+        continuum_info = result.get('continuum_info') or {}
+        method = continuum_info.get('method', 'iterative_linear')
+        if 'poly' in method:
+            set_continuum_method('polynomial', order=2)
         else:
-            all_lines = (result.get('direct_voigt_params') or {}).get('all_lines', [])
+            set_continuum_method('iterative_linear', order=1)
         
-        session = _get_session()
-        region = session['current_region']
-        w = region['wave']
-        f = region['flux']
-        f_err = region['flux_err']
+        # Re-run fit to get consistent flux_norm and flux_fit
+        fit_result = fit_ew()
         
-        # Normalize
-        threshold = np.percentile(f, 85)
-        cont_mask = f >= threshold
-        if np.sum(cont_mask) >= 2:
-            coef = np.polyfit(w[cont_mask], f[cont_mask], 1)
-            continuum = np.polyval(coef, w)
+        if not fit_result.get('success'):
+            # Fallback: use stored voigt params with simple continuum
+            session = _get_session()
+            region = session['current_region']
+            w = region['wave']
+            f = region['flux']
+            f_err = region['flux_err']
+            
+            # Simple continuum
+            threshold = np.percentile(f, 85)
+            cont_mask = f >= threshold
+            if np.sum(cont_mask) >= 2:
+                coef = np.polyfit(w[cont_mask], f[cont_mask], 1)
+                continuum = np.polyval(coef, w)
+            else:
+                continuum = np.full_like(f, np.percentile(f, 95))
+            
+            f_norm = f / continuum
+            f_norm_err = f_err / continuum
+            
+            # Build model from stored params
+            if result.get('used_llm') and result.get('iterations'):
+                all_lines = result['iterations'][-1].get('all_lines', [])
+            else:
+                all_lines = (result.get('direct_voigt_params') or {}).get('all_lines', [])
+            
+            model_norm = np.ones_like(w)
+            for line in all_lines:
+                center = line.get('center', 0)
+                amp = line.get('amplitude', 0)
+                sig = line.get('sigma', 0.05)
+                gam = line.get('gamma', 0.05)
+                if amp > 0 and sig > 0:
+                    v = voigt_profile(w - center, sig, gam)
+                    if v.max() > 0:
+                        v = v / v.max()
+                    model_norm -= amp * v
         else:
-            continuum = np.percentile(f, 95)
-        f_norm = f / continuum
-        f_norm_err = f_err / continuum
+            # Use the properly stored fit data
+            session = _get_session()
+            last_fit = session['last_fit']
+            w = np.array(last_fit['wave'])
+            f_norm = np.array(last_fit['flux_norm'])
+            f_norm_err = np.array(last_fit['flux_norm_err'])
+            model_norm = np.array(last_fit['flux_fit'])
+            all_lines = last_fit['all_lines']
         
-        # Build model
-        model = np.ones_like(w)
-        for line in all_lines:
-            center = line.get('center', 0)
-            amp = line.get('amplitude', 0)
-            sig = line.get('sigma', 0.05)
-            gam = line.get('gamma', 0.05)
-            if amp > 0 and sig > 0:
-                v = voigt_profile(w - center, sig, gam)
-                if v.max() > 0:
-                    v = v / v.max()
-                model -= amp * v
-        
-        residuals = f_norm - model
+        residuals = f_norm - model_norm
         residuals_norm = residuals / f_norm_err if np.any(f_norm_err > 0) else residuals / 0.01
         rms = float(np.std(residuals_norm))
         
@@ -662,7 +685,7 @@ def save_line_plot(spectrum_file: str, result: dict, output_dir: str, subdir: st
         ax1.axvline(wave, color='blue', ls=':', lw=2, alpha=0.7, label='Target')
         
         if all_lines:
-            ax1.plot(w, model, 'r-', lw=1.5, label='Fit')
+            ax1.plot(w, model_norm, 'r-', lw=1.5, label='Fit')
             for line in all_lines:
                 color = 'green' if abs(line['center'] - wave) < 0.3 else 'orange'
                 ax1.axvline(line['center'], color=color, ls='--', alpha=0.5, lw=1)
