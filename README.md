@@ -1,4 +1,4 @@
-# Egent: LLM-Powered Equivalent Width Measurement Agent
+# Egent: LLM-Powered Equivalent Width Measurement
 
 An autonomous equivalent width (EW) measurement system for high-resolution stellar spectra, combining optimized Voigt fitting with LLM vision-based quality assessment.
 
@@ -6,16 +6,20 @@ An autonomous equivalent width (EW) measurement system for high-resolution stell
 
 Egent uses a **two-stage approach**:
 
-1. **Direct Voigt Fitting**: Fast, deterministic fitting with optimized continuum estimation. Automatically accepts fits passing quality thresholds.
+1. **Direct Voigt Fitting**: Fast, deterministic multi-Voigt fitting with automated continuum estimation and quality metrics.
 
-2. **LLM Visual Inspection**: For borderline cases, LLM vision capability visually inspects fit plots and can adjust continuum, window size, add blend peaks, or flag unreliable lines.
+2. **LLM Visual Inspection**: For borderline cases, the LLM visually inspects fit plots and can:
+   - Adjust the extraction window
+   - Add blend components for missed lines
+   - Modify continuum treatment
+   - Flag unreliable measurements
 
-### Key Design Principles
+### Key Features
 
-- **Blind Analysis**: No catalog EW values are used for fitting decisions (only for final evaluation)
-- **Conservative**: LLM intervention only when diagnostics indicate uncertainty  
+- **Simple Input**: Just provide a spectrum file and a line list
+- **Rest-Frame Input**: Expects spectra already in the stellar rest frame
+- **Complete Provenance**: All Voigt parameters, continuum coefficients, and LLM reasoning stored
 - **Parallel Processing**: Thread pool execution for high throughput
-- **Complete Provenance**: All fit iterations, Voigt parameters, and LLM reasoning stored
 
 ## Installation
 
@@ -25,222 +29,199 @@ pip install numpy pandas scipy matplotlib openai python-dotenv
 
 ## Configuration
 
-Add your API key to `~/.env`:
+Add your OpenAI API key to your environment:
 
 ```bash
-# For Azure OpenAI (default)
-AZURE_API_KEY=your-azure-key
-# or
-AZURE=your-azure-key
+export OPENAI_API_KEY='your-openai-key'
+```
 
-# For OpenAI API (optional)
+Or create a `~/.env` file:
+```bash
 OPENAI_API_KEY=your-openai-key
+```
 
-# Select backend (optional, auto-detected from available keys)
-EGENT_BACKEND=azure  # or 'openai'
-
-# Override model (optional, defaults: 'gpt-5' or 'gpt-5-mini')
-EGENT_MODEL=gpt-5
+Optional: Override the default model (GPT-5-mini):
+```bash
+export EGENT_MODEL=gpt-5
 ```
 
 ## Quick Start
 
 ```bash
-# Run analysis using Azure OpenAI (default)
-python run_ew.py --gaia-id 4287378367995943680
+# Run on example data
+python run_ew.py --spectrum example/spectrum.csv --lines example/linelist.csv
 
-# Use mini model (faster, cheaper)
-python run_ew.py --gaia-id 4287378367995943680 --mini
+# With custom output directory
+python run_ew.py --spectrum example/spectrum.csv --lines example/linelist.csv --output-dir ./output
 
-# Limit lines for testing
-python run_ew.py --gaia-id 4287378367995943680 --n-lines 20
-
-# Light elements only (Z < 26)
-python run_ew.py --gaia-id 4287378367995943680 --light-only
-
-# Using OpenAI backend
-EGENT_BACKEND=openai python run_ew.py --gaia-id 4287378367995943680
+# Adjust number of parallel workers
+python run_ew.py --spectrum example/spectrum.csv --lines example/linelist.csv --workers 5
 ```
+
+## Input File Formats
+
+### Spectrum File (CSV)
+
+The spectrum must be in the stellar rest frame with three columns:
+
+```csv
+wavelength,flux,flux_error
+6100.00,12500.5,125.0
+6100.05,12480.2,124.8
+6100.10,12495.1,124.9
+...
+```
+
+- `wavelength`: Wavelength in Angstroms (rest frame)
+- `flux`: Flux values (any units)
+- `flux_error`: Flux uncertainty (same units as flux)
+
+### Line List File (CSV)
+
+A simple list of wavelengths to measure:
+
+```csv
+wavelength
+6125.03
+6137.69
+6142.49
+6145.02
+```
+
+## Output
+
+### Results JSON
+
+Results are saved as JSON with complete metadata:
+
+```
+~/Egent_output/results_<timestamp>.json
+```
+
+Contains:
+- `metadata`: Run configuration
+- `summary`: Statistics (direct/llm/flagged/timeout counts)
+- `results`: Per-line measurements including:
+  - Measured EW and uncertainty
+  - Direct vs LLM-refined values
+  - Full Voigt parameters for exact reconstruction
+  - LLM conversation logs (when triggered)
+
+### Diagnostic Plots
+
+```
+~/Egent_output/fits/
+├── direct/     # Direct fits (no LLM needed)
+├── llm/        # LLM-improved fits
+├── flagged/    # Flagged lines (unreliable)
+└── error/      # Lines with errors
+```
+
+Each plot shows:
+- Normalized flux with Voigt model overlay
+- Individual line centers marked
+- Residuals with σ-bands
+- RMS quality metric
+
+## How It Works
+
+### Stage 1: Direct Fitting
+
+For each line in the line list:
+
+1. Extract ±3 Å region around target wavelength
+2. Estimate continuum using iterative sigma-clipping
+3. Find absorption peaks in inverted normalized flux
+4. Fit multi-Voigt model (polynomial continuum + N Voigt profiles)
+5. Compute quality metrics (RMS, χ², residual slope)
+
+### Stage 2: LLM Review (if needed)
+
+Lines trigger LLM inspection if:
+- Quality is "poor" (high RMS, bad χ²)
+- Region is crowded (>10 lines)
+- Residual slope indicates continuum problems
+
+The LLM receives the diagnostic plot and can:
+- Call `extract_region()` to adjust window size
+- Call `set_continuum_method()` to try polynomial continuum
+- Call `set_continuum_regions()` for manual continuum selection
+- Call `fit_ew(additional_peaks=[...])` to add blend components
+- Call `flag_line()` to mark unreliable measurements
+- Call `record_measurement()` to accept the fit
+
+### Quality Thresholds
+
+- **RMS < 1.5σ**: Excellent fit → auto-accept
+- **RMS 1.5-2.0σ**: Good fit → accept if target region clean
+- **RMS 2.0-2.5σ**: Marginal → LLM review
+- **RMS > 2.5σ**: Poor → LLM must improve or flag
+- **RMS > 3.0σ**: Auto-flagged as unreliable
 
 ## Directory Structure
 
 ```
-Egent_Development/
-├── config.py               # Centralized configuration (API backends, models)
-├── llm_client.py           # Unified LLM client with retry logic
-├── ew_tools.py             # Core EW measurement functions (LLM tools)
-├── utils.py                # Utility functions (plotting, helpers)
-├── run_ew.py               # Main EW analysis pipeline
-├── run_all_spectra.py      # Batch processing for multiple spectra
-├── preprocess_spectra.py   # Pre-apply wavelength corrections
-├── replot_results.py       # Regenerate plots from saved results
-├── combine_results.py      # Combine individual results into aggregate format
-├── data/                   # Catalog and calibration data (not in repo)
-│   ├── c3po_equivalent_widths.csv      # Line catalog with reference EWs
-│   ├── magellan_bary_corrections.csv   # Barycentric corrections (for raw spectra)
-│   └── spectra_good_calibration.csv    # Calibration info for good spectra
-├── spectra/                # Raw Magellan spectra (not in repo)
-├── spectra_corrected/      # Pre-corrected spectra - PREFERRED (not in repo)
-└── ~/Egent_output/         # Default output directory (or ~/Egent_output_mini/)
+Egent/
+├── config.py          # Configuration (API key, model)
+├── llm_client.py      # OpenAI client with retry logic
+├── ew_tools.py        # Core EW measurement functions (LLM tools)
+├── run_ew.py          # Main analysis pipeline
+├── example/           # Example data files
+│   ├── spectrum.csv   # Sample high-SNR spectrum
+│   └── linelist.csv   # Sample line list
+├── data/              # Reference data (optional)
+└── README.md
 ```
 
-## Core Module: `ew_tools.py`
+## API Reference
 
-Thread-safe functions for multi-step fitting workflows:
+### LLM Tools (in `ew_tools.py`)
 
 | Function | Description |
 |----------|-------------|
-| `load_spectrum(gaia_id)` | Load pre-corrected spectrum (wavelengths in rest frame) |
-| `extract_region(wavelength, window)` | Extract spectral region around target |
-| `set_continuum_method(method, order)` | Configure continuum (linear default, polynomial for curved) |
-| `set_continuum_regions(regions)` | Manual continuum specification for crowded regions |
-| `fit_ew(additional_peaks=[])` | Multi-Voigt fitting; can add peaks for blends |
-| `get_fit_plot()` | Generate diagnostic plot for visual inspection |
-| `flag_line(wavelength, reason)` | Flag line as unreliable |
+| `load_spectrum(file)` | Load rest-frame spectrum from CSV |
+| `extract_region(wave, window)` | Extract spectral region around target |
+| `set_continuum_method(method, order)` | Configure continuum fitting |
+| `set_continuum_regions(regions)` | Manual continuum specification |
+| `fit_ew(additional_peaks=[])` | Multi-Voigt fitting with blend support |
+| `get_fit_plot()` | Generate diagnostic plot for inspection |
+| `flag_line(wave, reason)` | Flag line as unreliable |
 | `record_measurement(...)` | Record final EW measurement |
 
-## Output
-
-Results saved as JSON with complete metadata:
-```
-~/Egent_output/results_gaia{ID}_{timestamp}.json
-```
-
-Contains:
-- `metadata`: Run configuration (gaia_id, pair_id, component, model, backend, timestamp, n_lines, n_workers)
-- `summary`: Statistics (direct/llm/flagged/timeout counts)
-- `results`: Per-line measurements with:
-  - Direct EW from automated fitting
-  - Final measured EW (direct or LLM-refined)
-  - Full diagnostics (χ², RMS, n_lines, etc.)
-  - All Voigt parameters for exact reconstruction
-  - LLM conversation logs and reasoning (when LLM was used)
-
-### Generated Plots
-
-| Plot | Description |
-|------|-------------|
-| `gaia{ID}_fits/direct/*.png` | Direct fits (no LLM needed) |
-| `gaia{ID}_fits/llm/*.png` | LLM-improved fits |
-| `gaia{ID}_fits/flagged/*.png` | Flagged lines (unreliable measurements) |
-| `gaia{ID}_fits/error/*.png` | Lines with errors (no data, timeouts, etc.) |
-| `*_comparison_*.png` | 1-to-1 catalog vs measured with LLM correction arrows |
-
-To regenerate plots from saved results:
-```bash
-python replot_results.py output/results_gaia*.json --all-lines
-```
-
-## Batch Processing
-
-```bash
-# Process all well-calibrated spectra
-python run_all_spectra.py
-
-# Use mini model
-python run_all_spectra.py --mini
-
-# Resume interrupted run
-python run_all_spectra.py --resume
-
-# Preview without running
-python run_all_spectra.py --dry-run
-
-# Include poorly calibrated spectra
-python run_all_spectra.py --all-spectra
-
-# Custom worker count
-python run_all_spectra.py --workers 20
-```
-
-## Command Line Options
-
-### `run_ew.py`
-
-```
---gaia-id ID          Gaia DR3 source ID (required)
---workers N           Number of parallel workers
---light-only          Only analyze light elements (Z < 26)
---custom-spectrum     Path to custom spectrum file
---n-lines N           Limit number of lines (for testing)
---output-dir DIR      Custom output directory
---mini                Use mini model (faster, cheaper)
-```
-
-### `run_all_spectra.py`
-
-```
---workers N           Parallel workers
---resume              Skip already processed spectra
---dry-run             List spectra without processing
---limit N             Limit number of spectra
---n-lines N           Limit lines per spectrum
---all-spectra         Include poorly calibrated spectra
---output-dir DIR      Custom output directory
---mini                Use mini model
-```
-
-## Wavelength Calibration
-
-**Pre-corrected spectra (required)**: Spectra must be pre-processed and placed in `spectra_corrected/` with barycentric + empirical corrections already applied. The pipeline loads these corrected spectra directly - no runtime calibration is performed.
-
-**Pre-processing workflow**:
-1. Barycentric correction from `magellan_bary_corrections.csv`
-2. Empirical calibration using Fe I lines
-3. Save to `spectra_corrected/` for analysis
-
-To pre-process spectra:
-```bash
-# Process all good spectra
-python preprocess_spectra.py
-
-# Process single spectrum
-python preprocess_spectra.py --gaia-id 1234567890
-
-# Preview without saving
-python preprocess_spectra.py --dry-run
-```
-
-## Fit Quality Diagnostics
-
-The fitting pipeline computes rich diagnostics:
-
-- **Normalized RMS**: Residuals divided by uncertainty (expect ~1.0)
-- **Reduced χ²**: Chi-squared per degree of freedom
-- **Central RMS**: Focused on ±1.5Å around target (most important)
-- **Correlated residuals**: Consecutive high-residual points (indicates blending/bad continuum)
-- **Residual slope**: Linear trend in normalized residuals (σ/Å) - signals continuum errors
-
-### LLM Intervention Triggers
-- Poor fit quality assessment
-- 10+ lines in window (very crowded)
-- χ² > 15 or central RMS > 2.5
-- Residual slope > 0.5 σ/Å (continuum problem)
-
-### Auto-Flagging Criteria
-- RMS > 3.0σ → Automatically flagged by pipeline (safety net)
-- Lines flagged during fitting stage are excluded from statistics
-
-## API Backends
-
-Egent supports both OpenAI and Azure OpenAI:
+## Example Session
 
 ```python
-from config import get_config
+from ew_tools import load_spectrum, extract_region, fit_ew, get_fit_plot
 
-cfg = get_config()
-print(f"Backend: {cfg.backend}")  # 'openai' or 'azure'
-print(f"Model: {cfg.model_id}")   # 'gpt-5' (default) or 'gpt-5-mini'
+# Load spectrum
+load_spectrum('example/spectrum.csv')
+
+# Extract region around a line
+extract_region(6142.49, window=3.0)
+
+# Fit and get results
+result = fit_ew()
+print(f"EW = {result['target_line']['ew_mA']:.1f} mÅ")
+print(f"Quality: {result['fit_quality']}")
+
+# Generate plot
+plot = get_fit_plot()
+# plot['image_base64'] contains the PNG image
 ```
 
-Backend defaults to 'azure' but is auto-detected from available API keys, or set explicitly:
-```bash
-export EGENT_BACKEND=azure  # or 'openai'
+## Notes
+
+- **Rest Frame**: The spectrum must already be shifted to the stellar rest frame. Apply barycentric and radial velocity corrections before using Egent.
+- **Wavelength Units**: All wavelengths are in Angstroms.
+- **EW Units**: Equivalent widths are reported in milli-Angstroms (mÅ).
+
+## Citation
+
+If you use Egent in your research, please cite:
+
 ```
-
-## Author
-
-Yuan-Sen Ting (OSU)
+Ting et al. (2025), "Egent: An Autonomous Agent for Equivalent Width Measurement"
+```
 
 ## License
 

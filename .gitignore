@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Output (these are generated)
+output/
+tutorial_output/
+plots/
+*_output/
+
+# Data (too large for git)
+spectra/
+spectra_corrected/
+data/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+

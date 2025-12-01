@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Unified LLM Client with Retry Logic
-====================================
+LLM Client with Retry Logic
+============================
 
-Handles OpenAI and Azure OpenAI API calls with exponential backoff.
+Handles OpenAI API calls with exponential backoff for rate limits.
 """
 
 import time
@@ -14,24 +14,16 @@ from openai import OpenAI
 
 
 class LLMClient:
-    """Unified LLM client for OpenAI and Azure with retry logic."""
+    """OpenAI LLM client with retry logic for EW measurement."""
     
-    def __init__(self, use_mini: bool = False):
+    def __init__(self):
         """Initialize client with configuration."""
         from config import get_config
         config = get_config()
-        self.use_mini = use_mini
-        self.backend = config.backend
-        self.model_id = config.get_model(use_mini)
+        config.validate()
         
-        if self.backend == 'azure':
-            # Use OpenAI client with Azure endpoint (simpler, works with both)
-            self.client = OpenAI(
-                base_url=config.azure_endpoint + "/openai/v1",
-                api_key=config.api_key
-            )
-        else:  # openai
-            self.client = OpenAI(api_key=config.api_key)
+        self.model_id = config.model_id
+        self.client = OpenAI(api_key=config.api_key)
     
     def chat(
         self,
@@ -47,7 +39,7 @@ class LLMClient:
         
         Args:
             messages: List of message dicts
-            tools: Optional tool definitions
+            tools: Optional tool definitions for function calling
             system_prompt: Optional system prompt to prepend
             timeout: Request timeout in seconds
             max_retries: Maximum retry attempts
@@ -71,7 +63,6 @@ class LLMClient:
                 }
                 if tools:
                     kwargs['tools'] = tools
-                # Note: temperature/max_tokens not supported by some models
                 
                 response = self.client.chat.completions.create(**kwargs)
                 return response
@@ -82,18 +73,18 @@ class LLMClient:
                 
                 # Check if it's retryable
                 is_retryable = any(x in error_str for x in [
-                    'rate', 'limit', 'timeout', '429', '503', '500', 'overloaded', 'retry',
-                    'connection', 'reset', 'refused'
+                    'rate', 'limit', 'timeout', '429', '503', '500', 
+                    'overloaded', 'retry', 'connection', 'reset', 'refused'
                 ])
                 
                 if not is_retryable or attempt == max_retries - 1:
                     raise
                 
-                # Exponential backoff with jitter, longer waits for rate limits
+                # Exponential backoff with jitter
                 base_wait = initial_delay * (2 ** attempt)
-                # Rate limits often need 60+ seconds
+                # Rate limits often need longer waits
                 if '429' in error_str or 'rate' in error_str:
-                    base_wait = max(base_wait, 30)  # At least 30s for rate limits
+                    base_wait = max(base_wait, 30)
                 wait_time = base_wait + (time.time() % 5)  # Add jitter
                 
                 print(f"  ⚠️  LLM error (attempt {attempt + 1}/{max_retries}): {type(e).__name__}")
@@ -109,11 +100,9 @@ class LLMClient:
         image_path: str = None,
         timeout: int = 120,
         max_tokens: int = 1000,
-        max_retries: int = 8,
-        initial_delay: float = 2.0,
     ) -> str:
         """
-        Call LLM with vision capability.
+        Call LLM with vision capability for plot inspection.
         
         Args:
             text_prompt: Text prompt
@@ -121,8 +110,6 @@ class LLMClient:
             image_path: Path to image file (optional)
             timeout: Request timeout
             max_tokens: Maximum tokens in response
-            max_retries: Maximum retry attempts
-            initial_delay: Initial delay in seconds
             
         Returns:
             Response content as string
@@ -136,13 +123,11 @@ class LLMClient:
             with open(img_path, 'rb') as f:
                 image_base64 = base64.b64encode(f.read()).decode('utf-8')
             
-            # Determine image format
             ext = img_path.suffix.lower()
-            mime_type = {'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg'}.get(ext[1:], 'image/png')
+            mime_type = {'.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg'}.get(ext, 'image/png')
         else:
             mime_type = 'image/png'
         
-        # Build message with image
         messages = [{
             'role': 'user',
             'content': [
@@ -151,41 +136,10 @@ class LLMClient:
             ]
         }]
         
-        last_error = None
-        
-        for attempt in range(max_retries):
-            try:
-                kwargs = {
-                    'model': self.model_id,
-                    'messages': messages,
-                    'max_completion_tokens': max_tokens,
-                    'timeout': timeout,
-                }
-                # Note: temperature not supported by some models
-                
-                response = self.client.chat.completions.create(**kwargs)
-                return response.choices[0].message.content
-                
-            except Exception as e:
-                last_error = e
-                error_str = str(e).lower()
-                
-                is_retryable = any(x in error_str for x in [
-                    'rate', 'limit', 'timeout', '429', '503', '500', 'overloaded', 'retry',
-                    'connection', 'reset', 'refused'
-                ])
-                
-                if not is_retryable or attempt == max_retries - 1:
-                    raise
-                
-                # Exponential backoff with longer waits for rate limits
-                base_wait = initial_delay * (2 ** attempt)
-                if '429' in error_str or 'rate' in error_str:
-                    base_wait = max(base_wait, 30)
-                wait_time = base_wait + (time.time() % 5)
-                
-                print(f"  ⚠️  Vision LLM error (attempt {attempt + 1}/{max_retries}): {type(e).__name__}")
-                print(f"  ⏳ Retrying in {wait_time:.1f}s...")
-                time.sleep(wait_time)
-        
-        raise last_error
+        response = self.client.chat.completions.create(
+            model=self.model_id,
+            messages=messages,
+            max_completion_tokens=max_tokens,
+            timeout=timeout,
+        )
+        return response.choices[0].message.content
