@@ -2,6 +2,8 @@
 
 An autonomous equivalent width (EW) measurement system for high-resolution stellar spectra, combining optimized Voigt fitting with LLM vision-based quality assessment.
 
+**🌐 Try it online: [https://ew-agent.streamlit.app/](https://ew-agent.streamlit.app/)**
+
 ## Overview
 
 Egent uses a **two-stage approach**:
@@ -49,19 +51,7 @@ export EGENT_MODEL=gpt-5
 
 ## Quick Start
 
-### Option 1: Web Interface (Streamlit)
-
-```bash
-streamlit run app.py
-```
-
-This opens a web app where you can:
-- Upload spectrum and line list files
-- Enter your OpenAI API key
-- Watch results and plots update in real-time
-- Download results as JSON
-
-### Option 2: Command Line
+### Command Line
 
 ```bash
 # Run on example data
@@ -73,6 +63,21 @@ python run_ew.py --spectrum example/spectrum.csv --lines example/linelist.csv --
 # Adjust number of parallel workers
 python run_ew.py --spectrum example/spectrum.csv --lines example/linelist.csv --workers 5
 ```
+
+### Web Interface (Streamlit)
+
+**Try it online:** [https://ew-agent.streamlit.app/](https://ew-agent.streamlit.app/)
+
+Or run locally:
+```bash
+streamlit run app.py
+```
+
+The web app allows you to:
+- Upload spectrum and line list files (or use example data)
+- Enter your OpenAI API key
+- Watch results and plots update in real-time
+- Download results as CSV, JSON, or ZIP of plots
 
 ## Tutorial
 
