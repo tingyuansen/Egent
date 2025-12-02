@@ -288,7 +288,7 @@ if st.button("🚀 Run Analysis", disabled=not can_run, type="primary"):
     with col_results:
         st.subheader("📈 Results")
         results_table = st.empty()
-        st.caption("💡 Download buttons will appear when processing completes")
+        early_download_placeholder = st.empty()
     
     with col_plots:
         st.subheader("🔬 Diagnostic Plots")
@@ -406,6 +406,34 @@ if st.button("🚀 Run Analysis", disabled=not can_run, type="primary"):
         } for r in results])
         
         results_table.dataframe(results_df, use_container_width=True)
+        
+        # Early download option (with warning)
+        if len(results) < len(line_waves):
+            with early_download_placeholder.container():
+                st.warning("⚠️ Clicking download will **halt processing** and save current results")
+                
+                # Create ZIP with current results
+                import zipfile
+                zip_buffer = io.BytesIO()
+                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                    # Add CSV
+                    zf.writestr("ew_measurements.csv", results_df.to_csv(index=False))
+                    # Add plots
+                    for wave, img_data in plot_images.items():
+                        r = next((x for x in results if x['wavelength'] == wave), {})
+                        flagged = r.get('flagged', False)
+                        used_llm = r.get('used_llm', False)
+                        subdir = 'flagged' if flagged else ('llm' if used_llm else 'direct')
+                        zf.writestr(f"plots/{subdir}/{wave:.2f}.png", img_data)
+                
+                zip_buffer.seek(0)
+                st.download_button(
+                    label=f"⏹️ Stop & Download ({len(results)}/{len(line_waves)} lines + plots)",
+                    data=zip_buffer,
+                    file_name=f"egent_partial_{len(results)}_of_{len(line_waves)}.zip",
+                    mime="application/zip",
+                    key=f"early_dl_{i}"
+                )
         
         # Generate and display plot
         with plots_container:
