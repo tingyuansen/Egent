@@ -296,6 +296,7 @@ if st.button("🚀 Run Analysis", disabled=not can_run, type="primary"):
     # Process lines ONE AT A TIME (sequential for web demo)
     results = []
     stats = {'direct': 0, 'llm': 0, 'flagged': 0}
+    plot_images = {}  # Store plot images for download
     
     for i, line_wave in enumerate(line_waves):
         progress = (i + 1) / len(line_waves)
@@ -393,7 +394,7 @@ if st.button("🚀 Run Analysis", disabled=not can_run, type="primary"):
         
         results.append(result)
         
-        # Update results table
+        # Update results table with download button
         results_df = pd.DataFrame([{
             'Wavelength': r['wavelength'],
             'EW (mÅ)': f"{r.get('measured_ew', 0):.1f}" if r.get('measured_ew') else "---",
@@ -402,7 +403,18 @@ if st.button("🚀 Run Analysis", disabled=not can_run, type="primary"):
             'Method': 'LLM' if r.get('used_llm') else 'Direct',
             'Status': '🚩' if r.get('flagged') else '✓',
         } for r in results])
-        results_table.dataframe(results_df, use_container_width=True)
+        
+        with col_results:
+            results_table.dataframe(results_df, use_container_width=True)
+            # Download current results as CSV
+            csv_partial = results_df.to_csv(index=False)
+            st.download_button(
+                label=f"📥 Download CSV ({len(results)}/{len(line_waves)} lines)",
+                data=csv_partial,
+                file_name=f"egent_partial_{len(results)}.csv",
+                mime="text/csv",
+                key=f"csv_dl_{i}"
+            )
         
         # Generate and display plot
         with plots_container:
@@ -467,7 +479,25 @@ if st.button("🚀 Run Analysis", disabled=not can_run, type="primary"):
                     ax2.text(0.02, 0.95, f'RMS={rms:.2f}σ', transform=ax2.transAxes, fontsize=10, va='top')
                     
                     fig.tight_layout()
+                    
+                    # Save plot to buffer for download
+                    img_buffer = io.BytesIO()
+                    fig.savefig(img_buffer, format='png', dpi=120, bbox_inches='tight')
+                    img_buffer.seek(0)
+                    plot_images[line_wave] = img_buffer.getvalue()
+                    
+                    # Display plot
                     st.pyplot(fig)
+                    
+                    # Download button for this plot
+                    st.download_button(
+                        label=f"📥 Download {line_wave:.2f} Å plot",
+                        data=plot_images[line_wave],
+                        file_name=f"{line_wave:.2f}_{status.lower()}.png",
+                        mime="image/png",
+                        key=f"plot_dl_{line_wave}"
+                    )
+                    
                     plt.close()
             except Exception as e:
                 st.warning(f"Could not generate plot for {line_wave:.2f} Å: {e}")
