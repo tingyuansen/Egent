@@ -38,7 +38,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from config import get_config
-from llm_client import LLMClient
+from llm_client import get_llm_client
 
 
 # =============================================================================
@@ -304,7 +304,7 @@ def llm_measure_with_vision(
                                       inputs["ew_err_mA"], "voigt_fit", inputs["quality"])
         return {"error": f"Unknown tool: {name}"}
 
-    client = LLMClient()
+    client = get_llm_client()
 
     context = ""
     if direct_result and direct_result.get('success'):

@@ -23,15 +23,28 @@ Egent uses a **two-stage approach**:
 - **Complete Provenance**: All Voigt parameters, continuum coefficients, and LLM reasoning stored
 - **Parallel Processing**: Thread pool execution for high throughput
 
-> **Coming Soon**: Fully offline version using [Ollama](https://ollama.ai/) with Qwen3-VL-8B for local inference without API costs.
+## Backends
+
+Egent supports two backends:
+
+| Backend | Requirements | Speed | Cost |
+|---------|-------------|-------|------|
+| **OpenAI** (default) | API key | Fast (parallel) | ~$0.01/line |
+| **Local** (Apple Silicon) | Mac M1/M2/M3/M4 | Slower (~100s/line) | Free |
 
 ## Installation
 
 ```bash
+# Core dependencies
 pip install numpy pandas scipy matplotlib openai python-dotenv streamlit
+
+# For local backend (Apple Silicon only)
+pip install mlx-vlm
 ```
 
 ## Configuration
+
+### OpenAI Backend (Default)
 
 Add your OpenAI API key to your environment:
 
@@ -47,6 +60,26 @@ OPENAI_API_KEY=your-openai-key
 Optional: Override the default model (GPT-5-mini):
 ```bash
 export EGENT_MODEL=gpt-5
+```
+
+### Local Backend (Apple Silicon)
+
+For completely offline inference using Qwen3-VL-8B:
+
+```bash
+export EGENT_BACKEND=local
+```
+
+The local backend:
+- Uses **Qwen3-VL-8B** via [MLX-VLM](https://github.com/Blaizzy/mlx-vlm)
+- Runs on Apple Silicon (M1/M2/M3/M4) with 16GB+ RAM
+- Downloads ~4GB model on first run from HuggingFace
+- Requires **single worker** (no parallel processing)
+- Takes ~60-120 seconds per line with LLM review
+
+To use a different local model:
+```bash
+export EGENT_MODEL=mlx-community/Qwen3-VL-2B-Instruct-4bit  # Smaller, faster
 ```
 
 ## Quick Start
@@ -194,15 +227,16 @@ The LLM receives the diagnostic plot and can:
 
 ```
 Egent/
-├── app.py             # Streamlit web interface
-├── config.py          # Configuration (API key, model)
-├── llm_client.py      # OpenAI client with retry logic
-├── ew_tools.py        # Core EW measurement functions (LLM tools)
-├── run_ew.py          # Main analysis pipeline (CLI)
-├── tutorial.ipynb     # Step-by-step tutorial notebook
-├── example/           # Example data files
-│   ├── spectrum.csv   # Sample high-SNR Magellan/MIKE spectrum
-│   └── linelist.csv   # Sample line list (14 lines)
+├── app.py               # Streamlit web interface
+├── config.py            # Configuration (backend, API key, model)
+├── llm_client.py        # OpenAI client with retry logic
+├── llm_client_local.py  # Local MLX-VLM client (Apple Silicon)
+├── ew_tools.py          # Core EW measurement functions (LLM tools)
+├── run_ew.py            # Main analysis pipeline (CLI)
+├── tutorial.ipynb       # Step-by-step tutorial notebook
+├── example/             # Example data files
+│   ├── spectrum.csv     # Sample high-SNR Magellan/MIKE spectrum
+│   └── linelist.csv     # Sample line list (14 lines)
 └── README.md
 ```
 

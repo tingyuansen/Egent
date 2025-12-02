@@ -3,14 +3,33 @@
 LLM Client with Retry Logic
 ============================
 
-Handles OpenAI API calls with exponential backoff for rate limits.
+Unified interface for both OpenAI API and local MLX-VLM backends.
+
+Usage:
+    from llm_client import get_llm_client
+    client = get_llm_client()  # Returns appropriate client based on config
 """
 
 import time
 import base64
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-from openai import OpenAI
+
+
+def get_llm_client():
+    """
+    Factory function to get the appropriate LLM client.
+    
+    Returns OpenAI client or Local MLX client based on EGENT_BACKEND config.
+    """
+    from config import get_config
+    config = get_config()
+    
+    if config.backend == 'local':
+        from llm_client_local import LocalLLMClient
+        return LocalLLMClient(model_id=config.model_id)
+    else:
+        return LLMClient()
 
 
 class LLMClient:
@@ -18,6 +37,7 @@ class LLMClient:
     
     def __init__(self):
         """Initialize client with configuration."""
+        from openai import OpenAI
         from config import get_config
         config = get_config()
         config.validate()
