@@ -288,6 +288,7 @@ if st.button("🚀 Run Analysis", disabled=not can_run, type="primary"):
     with col_results:
         st.subheader("📈 Results")
         results_table = st.empty()
+        csv_download_placeholder = st.empty()
     
     with col_plots:
         st.subheader("🔬 Diagnostic Plots")
@@ -404,14 +405,14 @@ if st.button("🚀 Run Analysis", disabled=not can_run, type="primary"):
             'Status': '🚩' if r.get('flagged') else '✓',
         } for r in results])
         
-        with col_results:
-            results_table.dataframe(results_df, use_container_width=True)
-            # Download current results as CSV
-            csv_partial = results_df.to_csv(index=False)
+        results_table.dataframe(results_df, use_container_width=True)
+        # Download current results as CSV (replaces previous button)
+        csv_partial = results_df.to_csv(index=False)
+        with csv_download_placeholder.container():
             st.download_button(
                 label=f"📥 Download CSV ({len(results)}/{len(line_waves)} lines)",
                 data=csv_partial,
-                file_name=f"egent_partial_{len(results)}.csv",
+                file_name=f"egent_ew_{len(results)}_of_{len(line_waves)}.csv",
                 mime="text/csv",
                 key=f"csv_dl_{i}"
             )
