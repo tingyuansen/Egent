@@ -32,16 +32,12 @@ Egent supports two backends:
 | **OpenAI** (default) | API key | Fast (parallel) | ~$0.01/line |
 | **Local** (Apple Silicon) | Mac M1/M2/M3/M4, 16GB+ RAM | Slower (~100s/line) | Free |
 
-> ⚠️ **Note on Local Backend**: The local Qwen3-VL-8B model has **not been benchmarked** against the OpenAI backend for EW measurement accuracy. Smaller local models are likely subpar compared to GPT-5-mini. We recommend using OpenAI for production work. The local backend is provided as a **fallback option** for users who prefer fully offline operation or cannot use API services.
+> ⚠️ **Note on Local Backend**: The local Qwen3-VL-8B model has **not been benchmarked** against the OpenAI backend for EW measurement accuracy.We recommend using OpenAI for production work. The local backend is provided as a **fallback option** for users who prefer fully offline operation or cannot use API services.
 
 ## Installation
 
 ```bash
-# Core dependencies
 pip install numpy pandas scipy matplotlib openai python-dotenv streamlit
-
-# For local backend (Apple Silicon only)
-pip install mlx-vlm
 ```
 
 ## Configuration
@@ -69,6 +65,10 @@ export EGENT_MODEL=gpt-5
 For completely offline inference using Qwen3-VL-8B:
 
 ```bash
+# Install MLX-VLM (Apple Silicon only)
+pip install mlx-vlm
+
+# Set backend
 export EGENT_BACKEND=local
 ```
 
@@ -77,7 +77,7 @@ The local backend:
 - Runs on Apple Silicon (M1/M2/M3/M4) with 16GB+ RAM
 - Downloads ~4GB model on first run from HuggingFace
 - Requires **single worker** (no parallel processing)
-- Takes ~60-120 seconds per line with LLM review
+- Takes ~100 seconds per line with LLM review
 
 To use a different local model:
 ```bash
