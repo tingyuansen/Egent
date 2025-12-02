@@ -30,7 +30,9 @@ Egent supports two backends:
 | Backend | Requirements | Speed | Cost |
 |---------|-------------|-------|------|
 | **OpenAI** (default) | API key | Fast (parallel) | ~$0.01/line |
-| **Local** (Apple Silicon) | Mac M1/M2/M3/M4 | Slower (~100s/line) | Free |
+| **Local** (Apple Silicon) | Mac M1/M2/M3/M4, 16GB+ RAM | Slower (~100s/line) | Free |
+
+> ⚠️ **Note on Local Backend**: The local Qwen3-VL-8B model has **not been benchmarked** against the OpenAI backend for EW measurement accuracy. Smaller local models are likely subpar compared to GPT-5-mini. We recommend using OpenAI for production work. The local backend is provided as a **fallback option** for users who prefer fully offline operation or cannot use API services.
 
 ## Installation
 
