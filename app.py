@@ -28,53 +28,18 @@ st.set_page_config(
     layout="wide",
 )
 
-# Custom CSS for larger title
-st.markdown("""
-<style>
-    .main-title {
-        font-size: 4rem;
-        font-weight: bold;
-        color: #1E88E5;
-        text-align: center;
-        margin-bottom: 0;
-    }
-    .sub-title {
-        font-size: 1.5rem;
-        color: #666;
-        text-align: center;
-        margin-top: 0;
-        margin-bottom: 1rem;
-    }
-    .paper-ref {
-        text-align: center;
-        font-size: 1rem;
-        color: #888;
-        margin-bottom: 2rem;
-    }
-    .warning-box {
-        background-color: #fff3cd;
-        border: 1px solid #ffc107;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        margin: 1rem 0;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Header
-st.markdown('<p class="main-title">⭐ Egent</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-title">LLM-Powered Equivalent Width Measurement</p>', unsafe_allow_html=True)
-st.markdown('<p class="paper-ref">Ting et al. (2025) | <a href="https://github.com/tingyuansen/Egent">GitHub</a></p>', unsafe_allow_html=True)
+# Header - centered, full width
+st.markdown("<h1 style='text-align: center;'>⭐ Egent</h1>", unsafe_allow_html=True)
+st.markdown("<h3 style='text-align: center;'>LLM-Powered Equivalent Width Measurement</h3>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'><b>Ting et al. (2025)</b> | <a href='https://github.com/tingyuansen/Egent'>GitHub</a></p>", unsafe_allow_html=True)
 
 # Warning about speed
-st.markdown("""
-<div class="warning-box">
-⚠️ <b>Note:</b> This web demo processes lines sequentially and may be slow. 
+st.warning("""
+**Note:** This web demo processes lines sequentially and may be slow. 
 For faster analysis with parallel processing, clone the 
-<a href="https://github.com/tingyuansen/Egent">GitHub repository</a> 
-and run locally with <code>python run_ew.py</code> or see the <code>tutorial.ipynb</code>.
-</div>
-""", unsafe_allow_html=True)
+[GitHub repository](https://github.com/tingyuansen/Egent) 
+and run locally with `python run_ew.py` or see the `tutorial.ipynb`.
+""")
 
 st.markdown("---")
 
@@ -93,7 +58,7 @@ with st.sidebar:
         4. Click **"Create new secret key"**
         5. Copy the key (starts with `sk-`)
         
-        **Cost:** ~$0.005 per line (~200 lines per $1)
+        **Cost:** About 0.5 cents per line (roughly 200 lines per dollar)
         """)
     
     api_key = st.text_input(
