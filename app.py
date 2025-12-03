@@ -31,7 +31,7 @@ st.set_page_config(
 # Header - centered, full width
 st.markdown("<h1 style='text-align: center;'>⭐ Egent</h1>", unsafe_allow_html=True)
 st.markdown("<h3 style='text-align: center;'>LLM-Powered Equivalent Width Measurement</h3>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center;'><b>Ting et al. (2025)</b> | <a href='https://github.com/tingyuansen/Egent'>GitHub</a></p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'><b>Ting et al. (2025)</b> | <a href='https://arxiv.org/abs/2512.01270'>arXiv:2512.01270</a> | <a href='https://github.com/tingyuansen/Egent'>GitHub</a></p>", unsafe_allow_html=True)
 
 # Warning about speed
 st.warning("""
@@ -116,11 +116,12 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("""
     **Citation:**
-    ```
-    Ting et al. (2025)
-    "Egent: An Autonomous Agent 
-    for Equivalent Width Measurement"
-    ```
+    
+    Ting et al. (2025)  
+    [arXiv:2512.01270](https://arxiv.org/abs/2512.01270)
+    
+    *Egent: An Autonomous Agent  
+    for Equivalent Width Measurement*
     """)
 
 # Option to use example files
@@ -608,6 +609,7 @@ st.markdown("""
 <div style="text-align: center; color: #888; font-size: 0.9rem;">
     <p><b>Egent</b>: LLM-Powered Equivalent Width Measurement<br>
     Ting et al. (2025) | 
+    <a href="https://arxiv.org/abs/2512.01270">arXiv:2512.01270</a> | 
     <a href="https://github.com/tingyuansen/Egent">GitHub Repository</a></p>
     <p style="font-size: 0.8rem;">For faster processing, run locally with parallel workers.</p>
 </div>

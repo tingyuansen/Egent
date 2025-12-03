@@ -288,9 +288,25 @@ plot = get_fit_plot()
 
 If you use Egent in your research, please cite:
 
+```bibtex
+@ARTICLE{2025arXiv251201270T,
+       author = {{Ting}, Yuan-Sen and {Mahmud Saad}, Serat and {Liu}, Fan and {Shen}, Yuting},
+        title = "{Egent: An Autonomous Agent for Equivalent Width Measurement}",
+      journal = {arXiv e-prints},
+     keywords = {Instrumentation and Methods for Astrophysics, Astrophysics of Galaxies, Solar and Stellar Astrophysics},
+         year = 2025,
+        month = dec,
+          eid = {arXiv:2512.01270},
+        pages = {arXiv:2512.01270},
+archivePrefix = {arXiv},
+       eprint = {2512.01270},
+ primaryClass = {astro-ph.IM},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2025arXiv251201270T},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
 ```
-Ting et al. (2025), "Egent: An Autonomous Agent for Equivalent Width Measurement"
-```
+
+Paper: [arXiv:2512.01270](https://arxiv.org/abs/2512.01270)
 
 ## License
 
